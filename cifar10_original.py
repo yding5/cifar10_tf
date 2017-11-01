@@ -35,7 +35,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import gzip
+import argparse
 import os
 import re
 import sys
@@ -46,15 +46,19 @@ import tensorflow as tf
 
 import cifar10_input
 
-FLAGS = tf.app.flags.FLAGS
+parser = argparse.ArgumentParser()
 
 # Basic model parameters.
-tf.app.flags.DEFINE_integer('batch_size', 128,
-                            """Number of images to process in a batch.""")
-tf.app.flags.DEFINE_string('data_dir', '../data/cifar10',
-                           """Path to the CIFAR-10 data directory.""")
-tf.app.flags.DEFINE_boolean('use_fp16', False,
-                            """Train the model using fp16.""")
+parser.add_argument('--batch_size', type=int, default=128,
+                    help='Number of images to process in a batch.')
+
+parser.add_argument('--data_dir', type=str, default='/tmp/cifar10_data',
+                    help='Path to the CIFAR-10 data directory.')
+
+parser.add_argument('--use_fp16', type=bool, default=False,
+                    help='Train the model using fp16.')
+
+FLAGS = parser.parse_args()
 
 # Global constants describing the CIFAR-10 data set.
 IMAGE_SIZE = cifar10_input.IMAGE_SIZE
@@ -67,7 +71,7 @@ NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = cifar10_input.NUM_EXAMPLES_PER_EPOCH_FOR_EVAL
 MOVING_AVERAGE_DECAY = 0.9999     # The decay to use for the moving average.
 NUM_EPOCHS_PER_DECAY = 350.0      # Epochs after which learning rate decays.
 LEARNING_RATE_DECAY_FACTOR = 0.1  # Learning rate decay factor.
-INITIAL_LEARNING_RATE = 0.001       # Initial learning rate.
+INITIAL_LEARNING_RATE = 0.1       # Initial learning rate.
 
 # If a model is trained with multiple GPUs, prefix all Op names with tower_name
 # to differentiate the operations. Note that this prefix is removed from the
@@ -91,8 +95,9 @@ def _activation_summary(x):
   # Remove 'tower_[0-9]/' from the name in case this is a multi-GPU training
   # session. This helps the clarity of presentation on tensorboard.
   tensor_name = re.sub('%s_[0-9]*/' % TOWER_NAME, '', x.op.name)
-  tf.histogram_summary(tensor_name + '/activations', x)
-  tf.scalar_summary(tensor_name + '/sparsity', tf.nn.zero_fraction(x))
+  tf.summary.histogram(tensor_name + '/activations', x)
+  tf.summary.scalar(tensor_name + '/sparsity',
+                                       tf.nn.zero_fraction(x))
 
 
 def _variable_on_cpu(name, shape, initializer):
@@ -134,7 +139,7 @@ def _variable_with_weight_decay(name, shape, stddev, wd):
       shape,
       tf.truncated_normal_initializer(stddev=stddev, dtype=dtype))
   if wd is not None:
-    weight_decay = tf.mul(tf.nn.l2_loss(var), wd, name='weight_loss')
+    weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
     tf.add_to_collection('losses', weight_decay)
   return var
 
@@ -207,8 +212,8 @@ def inference(images):
                                          wd=0.0)
     conv = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
     biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
-    bias = tf.nn.bias_add(conv, biases)
-    conv1 = tf.nn.relu(bias, name=scope.name)
+    pre_activation = tf.nn.bias_add(conv, biases)
+    conv1 = tf.nn.relu(pre_activation, name=scope.name)
     _activation_summary(conv1)
 
   # pool1
@@ -226,8 +231,8 @@ def inference(images):
                                          wd=0.0)
     conv = tf.nn.conv2d(norm1, kernel, [1, 1, 1, 1], padding='SAME')
     biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.1))
-    bias = tf.nn.bias_add(conv, biases)
-    conv2 = tf.nn.relu(bias, name=scope.name)
+    pre_activation = tf.nn.bias_add(conv, biases)
+    conv2 = tf.nn.relu(pre_activation, name=scope.name)
     _activation_summary(conv2)
 
   # norm2
@@ -256,7 +261,10 @@ def inference(images):
     local4 = tf.nn.relu(tf.matmul(local3, weights) + biases, name=scope.name)
     _activation_summary(local4)
 
-  # softmax, i.e. softmax(WX + b)
+  # linear layer(WX + b),
+  # We don't apply softmax here because
+  # tf.nn.sparse_softmax_cross_entropy_with_logits accepts the unscaled logits
+  # and performs the softmax internally for efficiency.
   with tf.variable_scope('softmax_linear') as scope:
     weights = _variable_with_weight_decay('weights', [192, NUM_CLASSES],
                                           stddev=1/192.0, wd=0.0)
@@ -283,7 +291,7 @@ def loss(logits, labels):
   # Calculate the average cross entropy loss across the batch.
   labels = tf.cast(labels, tf.int64)
   cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
-      logits, labels, name='cross_entropy_per_example')
+      labels=labels, logits=logits, name='cross_entropy_per_example')
   cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
   tf.add_to_collection('losses', cross_entropy_mean)
 
@@ -313,42 +321,13 @@ def _add_loss_summaries(total_loss):
   for l in losses + [total_loss]:
     # Name each loss as '(raw)' and name the moving average version of the loss
     # as the original loss name.
-    tf.scalar_summary(l.op.name +' (raw)', l)
-    tf.scalar_summary(l.op.name, loss_averages.average(l))
+    tf.summary.scalar(l.op.name + ' (raw)', l)
+    tf.summary.scalar(l.op.name, loss_averages.average(l))
 
   return loss_averages_op
 
 
-def apply_quantization(name_and_condition, index_w, grads_and_vars):
-    cont = 0
-    for grad, var in grads_and_vars:
-        if var.name in index_w:
-            cluster = tf.to_int32(tf.reduce_max(index_w[var.name]))
-            grad_sum = tf.unsorted_segment_sum(tf.reshape(grad,[-1]), cluster + 1)
-            
-            grad_all = tf.zeros_like(index_w[var.name], dtype=tf.float32)
-            for i in xrange(2**name_and_condition[var.name]):
-                shape = grad.get_shape()
-                grad_pos = tf.to_float(tf.equal(index_w[var.name], tf.constant(i, dtype=tf.int32, shape=shape)))
-                grad_ind = tf.cond(tf.equal(grad_sum[i], 0), lambda: tf.mul(grad_pos, grad_sum[i]),
-                                                             lambda: tf.mul(grad_pos, grad_sum[i] / tf.reduce_sum(grad_pos))) 
-                grad_all = tf.add(grad_ind, grad_all)           
-            grads_and_vars[cont] = (grad_all, var)
-        cont += 1
-    return grads_and_vars
-  
-
-def apply_pruning(name_and_condition, index_w, grads_and_vars):
-    cont = 0
-    for grad, var in grads_and_vars:
-        if var.name in index_w:
-            grads_and_vars[cont] = (tf.mul(index_w[var.name], grad), var)
-        cont += 1
-    return grads_and_vars  
-  
-
-#def train(total_loss, global_step):
-def train(total_loss, global_step, name_and_condition, index_w):
+def train(total_loss, global_step):
   """Train CIFAR-10 model.
 
   Create an optimizer and apply to all trainable variables. Add moving
@@ -371,39 +350,34 @@ def train(total_loss, global_step, name_and_condition, index_w):
                                   decay_steps,
                                   LEARNING_RATE_DECAY_FACTOR,
                                   staircase=True)
-  tf.scalar_summary('learning_rate', lr)
+  tf.summary.scalar('learning_rate', lr)
 
   # Generate moving averages of all losses and associated summaries.
-  #loss_averages_op = _add_loss_summaries(total_loss)
+  loss_averages_op = _add_loss_summaries(total_loss)
 
   # Compute gradients.
-  #with tf.control_dependencies([loss_averages_op]):
-  #  opt = tf.train.GradientDescentOptimizer(lr)
-  #  grads = opt.compute_gradients(total_loss) 
-  opt = tf.train.GradientDescentOptimizer(lr)
-  grads = opt.compute_gradients(total_loss)
-  
-  # Apply gradients.
-  #quan_grads = apply_quantization(name_and_condition, index_w, grads)
-  quan_grads = apply_pruning(name_and_condition, index_w, grads)    
-  apply_gradient_op = opt.apply_gradients(quan_grads, global_step=global_step)
+  with tf.control_dependencies([loss_averages_op]):
+    opt = tf.train.GradientDescentOptimizer(lr)
+    grads = opt.compute_gradients(total_loss)
 
-  
+  # Apply gradients.
+  apply_gradient_op = opt.apply_gradients(grads, global_step=global_step)
+
   # Add histograms for trainable variables.
   for var in tf.trainable_variables():
-    tf.histogram_summary(var.op.name, var)
+    tf.summary.histogram(var.op.name, var)
 
   # Add histograms for gradients.
   for grad, var in grads:
     if grad is not None:
-      tf.histogram_summary(var.op.name + '/gradients', grad)
+      tf.summary.histogram(var.op.name + '/gradients', grad)
 
   # Track the moving averages of all trainable variables.
-  #variable_averages = tf.train.ExponentialMovingAverage(
-  #    MOVING_AVERAGE_DECAY, global_step)
-  #variables_averages_op = variable_averages.apply(tf.trainable_variables())
+  variable_averages = tf.train.ExponentialMovingAverage(
+      MOVING_AVERAGE_DECAY, global_step)
+  variables_averages_op = variable_averages.apply(tf.trainable_variables())
 
-  with tf.control_dependencies([apply_gradient_op]):#, variables_averages_op]):
+  with tf.control_dependencies([apply_gradient_op, variables_averages_op]):
     train_op = tf.no_op(name='train')
 
   return train_op
@@ -425,4 +399,6 @@ def maybe_download_and_extract():
     print()
     statinfo = os.stat(filepath)
     print('Successfully downloaded', filename, statinfo.st_size, 'bytes.')
+  extracted_dir_path = os.path.join(dest_directory, 'cifar-10-batches-bin')
+  if not os.path.exists(extracted_dir_path):
     tarfile.open(filepath, 'r:gz').extractall(dest_directory)
