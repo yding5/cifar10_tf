@@ -37,37 +37,34 @@ from __future__ import division
 from __future__ import print_function
 
 from datetime import datetime
+import os.path
 import time
 
+import numpy as np
+from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 
 import cifar10
+#J.L. from tensorflow.models.image.cifar10 import cifar10
 
-parser = cifar10.parser
+FLAGS = tf.app.flags.FLAGS
 
-parser.add_argument('--train_dir', type=str, default='./ckpt',
-                    help='Directory where to write event logs and checkpoint.')
-
-parser.add_argument('--max_steps', type=int, default=1000000,
-                    help='Number of batches to run.')
-
-parser.add_argument('--log_device_placement', type=bool, default=False,
-                    help='Whether to log device placement.')
-
-parser.add_argument('--log_frequency', type=int, default=10,
-                    help='How often to log results to the console.')
+tf.app.flags.DEFINE_string('train_dir', '/afs/crc.nd.edu/user/j/jliu16/Private/Research/2017/cifar/tmp/cifar10_train',
+                           """Directory where to write event logs """
+                           """and checkpoint.""")
+tf.app.flags.DEFINE_integer('max_steps', 1000000,
+                            """Number of batches to run.""")
+tf.app.flags.DEFINE_boolean('log_device_placement', False,
+                            """Whether to log device placement.""")
 
 
 def train():
   """Train CIFAR-10 for a number of steps."""
   with tf.Graph().as_default():
-    global_step = tf.contrib.framework.get_or_create_global_step()
+    global_step = tf.Variable(0, trainable=False)
 
     # Get images and labels for CIFAR-10.
-    # Force input pipeline to CPU:0 to avoid operations sometimes ending up on
-    # GPU and resulting in a slow down.
-    with tf.device('/cpu:0'):
-      images, labels = cifar10.distorted_inputs()
+    images, labels = cifar10.distorted_inputs()
 
     # Build a Graph that computes the logits predictions from the
     # inference model.
@@ -80,41 +77,50 @@ def train():
     # updates the model parameters.
     train_op = cifar10.train(loss, global_step)
 
-    class _LoggerHook(tf.train.SessionRunHook):
-      """Logs loss and runtime."""
+    # Create a saver.
+    saver = tf.train.Saver(tf.all_variables())
 
-      def begin(self):
-        self._step = -1
-        self._start_time = time.time()
+    # Build the summary operation based on the TF collection of Summaries.
+    summary_op = tf.summary.merge_all()
 
-      def before_run(self, run_context):
-        self._step += 1
-        return tf.train.SessionRunArgs(loss)  # Asks for loss value.
+    # Build an initialization operation to run below.
+    init = tf.global_variables_initializer()
 
-      def after_run(self, run_context, run_values):
-        if self._step % FLAGS.log_frequency == 0:
-          current_time = time.time()
-          duration = current_time - self._start_time
-          self._start_time = current_time
+    # Start running operations on the Graph.
+    sess = tf.Session(config=tf.ConfigProto(
+        log_device_placement=FLAGS.log_device_placement))
+    sess.run(init)
 
-          loss_value = run_values.results
-          examples_per_sec = FLAGS.log_frequency * FLAGS.batch_size / duration
-          sec_per_batch = float(duration / FLAGS.log_frequency)
+    # Start the queue runners.
+    tf.train.start_queue_runners(sess=sess)
 
-          format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
-                        'sec/batch)')
-          print (format_str % (datetime.now(), self._step, loss_value,
-                               examples_per_sec, sec_per_batch))
+    summary_writer = tf.summary.FileWriter(FLAGS.train_dir, sess.graph)
 
-    with tf.train.MonitoredTrainingSession(
-        checkpoint_dir=FLAGS.train_dir,
-        hooks=[tf.train.StopAtStepHook(last_step=FLAGS.max_steps),
-               tf.train.NanTensorHook(loss),
-               _LoggerHook()],
-        config=tf.ConfigProto(
-            log_device_placement=FLAGS.log_device_placement)) as mon_sess:
-      while not mon_sess.should_stop():
-        mon_sess.run(train_op)
+    for step in xrange(FLAGS.max_steps):
+      start_time = time.time()
+      _, loss_value = sess.run([train_op, loss])
+      duration = time.time() - start_time
+
+      assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
+
+      if step % 10 == 0:
+        num_examples_per_step = FLAGS.batch_size
+        examples_per_sec = num_examples_per_step / duration
+        sec_per_batch = float(duration)
+
+        format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
+                      'sec/batch)')
+        print (format_str % (datetime.now(), step, loss_value,
+                             examples_per_sec, sec_per_batch))
+
+      if step % 100 == 0:
+        summary_str = sess.run(summary_op)
+        summary_writer.add_summary(summary_str, step)
+
+      # Save the model checkpoint periodically.
+      if step % 1000 == 0 or (step + 1) == FLAGS.max_steps:
+        checkpoint_path = os.path.join(FLAGS.train_dir, 'model.ckpt')
+        saver.save(sess, checkpoint_path, global_step=step)
 
 
 def main(argv=None):  # pylint: disable=unused-argument
@@ -126,5 +132,4 @@ def main(argv=None):  # pylint: disable=unused-argument
 
 
 if __name__ == '__main__':
-  FLAGS = parser.parse_args()
   tf.app.run()
