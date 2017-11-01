@@ -411,15 +411,23 @@ def train(total_loss, global_step, name_and_condition, index_w):
   quan_grads = apply_pruning(name_and_condition, index_w, grads)    
   apply_gradient_op = opt.apply_gradients(quan_grads, global_step=global_step)
 
-  
-  # Add histograms for trainable variables.
+  #dyk
+    # Add histograms for trainable variables.
   for var in tf.trainable_variables():
-    tf.histogram_summary(var.op.name, var)
+    tf.summary.histogram(var.op.name, var)
 
   # Add histograms for gradients.
   for grad, var in grads:
     if grad is not None:
-      tf.histogram_summary(var.op.name + '/gradients', grad)
+      tf.summary.histogram(var.op.name + '/gradients', grad)
+  # # Add histograms for trainable variables.
+  # for var in tf.trainable_variables():
+  #   tf.histogram_summary(var.op.name, var)
+
+  # # Add histograms for gradients.
+  # for grad, var in grads:
+  #   if grad is not None:
+  #     tf.histogram_summary(var.op.name + '/gradients', grad)
 
   # Track the moving averages of all trainable variables.
   #variable_averages = tf.train.ExponentialMovingAverage(
