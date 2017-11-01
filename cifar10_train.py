@@ -45,7 +45,7 @@ import cifar10
 
 parser = cifar10.parser
 
-parser.add_argument('--train_dir', type=str, default='/tmp/cifar10_train',
+parser.add_argument('--train_dir', type=str, default='./ckpt',
                     help='Directory where to write event logs and checkpoint.')
 
 parser.add_argument('--max_steps', type=int, default=1000000,
