@@ -45,11 +45,10 @@ from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 
 import cifar10
-#J.L. from tensorflow.models.image.cifar10 import cifar10
 
 FLAGS = tf.app.flags.FLAGS
 
-tf.app.flags.DEFINE_string('train_dir', './ckpt',
+tf.app.flags.DEFINE_string('train_dir', './ckpt2',
                            """Directory where to write event logs """
                            """and checkpoint.""")
 tf.app.flags.DEFINE_integer('max_steps', 1000000,
@@ -81,10 +80,10 @@ def train():
     saver = tf.train.Saver(tf.all_variables())
 
     # Build the summary operation based on the TF collection of Summaries.
-    summary_op = tf.summary.merge_all()
+    summary_op = tf.merge_all_summaries()
 
     # Build an initialization operation to run below.
-    init = tf.global_variables_initializer()
+    init = tf.initialize_all_variables()
 
     # Start running operations on the Graph.
     sess = tf.Session(config=tf.ConfigProto(
@@ -94,7 +93,7 @@ def train():
     # Start the queue runners.
     tf.train.start_queue_runners(sess=sess)
 
-    summary_writer = tf.summary.FileWriter(FLAGS.train_dir, sess.graph)
+    summary_writer = tf.train.SummaryWriter(FLAGS.train_dir, sess.graph)
 
     for step in xrange(FLAGS.max_steps):
       start_time = time.time()

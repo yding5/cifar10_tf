@@ -39,31 +39,103 @@ import math
 import time
 
 import numpy as np
+import matplotlib.pyplot as plt
 import tensorflow as tf
 
 import cifar10
 
-parser = cifar10.parser
+FLAGS = tf.app.flags.FLAGS
 
-parser.add_argument('--eval_dir', type=str, default='/tmp/cifar10_eval',
-                    help='Directory where to write event logs.')
+tf.app.flags.DEFINE_string('eval_dir', './eval',
+                           """Directory where to write event logs.""")
+tf.app.flags.DEFINE_string('eval_data', 'test',
+                           """Either 'test' or 'train_eval'.""")
+tf.app.flags.DEFINE_string('checkpoint_dir', './ckpt_prune_1',
+                           """Directory where to read model checkpoints.""")
+tf.app.flags.DEFINE_integer('eval_interval_secs', 5 * 5,
+                            """How often to run the eval.""")
+tf.app.flags.DEFINE_integer('num_examples', 10000,
+                            """Number of examples to run.""")
+tf.app.flags.DEFINE_boolean('run_once', True,
+                         """Whether to run eval only once.""")
 
-parser.add_argument('--eval_data', type=str, default='test',
-                    help='Either `test` or `train_eval`.')
+name_dir = {"conv1/weights:0": "conv1",
+            "conv2/weights:0": "conv2",
+            "local3/weights:0": "local3",
+            "local4/weights:0": "local4",
+            "softmax_linear/weights:0": "softmax"}
 
-parser.add_argument('--checkpoint_dir', type=str, default='/tmp/cifar10_train',
-                    help='Directory where to read model checkpoints.')
+def plotData(titleName, flatW, numBin=None):
+#    sortW = np.sort(flatW)
+#    uniqW = np.unique(sortW)
+#    print("The # of cluster: " + str(uniqW.shape[0]))
+#    for item in uniqW:
+#        print("%f : %d" %(item, sortW.tolist().count(item)))
 
-parser.add_argument('--eval_interval_secs', type=int, default=60*5,
-                    help='How often to run the eval.')
+    fig = plt.figure()
+    fig.suptitle(titleName)
+    curr_plot = fig.add_subplot(111)
+#    binBoundaries = np.linspace(minW, maxW, 2**bit + 1)
+    if numBin == None:
+        curr_plot.hist(flatW[flatW!=0], bins=256, edgecolor='None');
+    else:
+        curr_plot.hist(flatW[flatW!=0], bins=2**numBin, edgecolor='None');
+    curr_plot.set_xlabel('Weight Value')
+    curr_plot.set_ylabel('Count')
+#    curr_plot.set_xlim(minW, maxW)
+    curr_plot.grid(True)
+    fig.savefig(titleName + '.pdf')
+    plt.close('all')
 
-parser.add_argument('--num_examples', type=int, default=10000,
-                    help='Number of examples to run.')
 
-parser.add_argument('--run_once', type=bool, default=False,
-                    help='Whether to run eval only once.')
+def quanization(sess, name_and_condition):
+    index_w = {}
+    for var in tf.trainable_variables():
+        if var.name in name_and_condition:
+            #print(var.name)
+            org_w = sess.run(var)
+            flat_w = org_w.flatten()
+            copy_w = flat_w.copy()
 
+            max_w, min_w  = np.amax(flat_w), np.amin(flat_w)
+            interval = np.linspace(min_w, max_w, 2**name_and_condition[var.name] + 1)
+            for i in xrange(2**name_and_condition[var.name]):
+                indexW = (flat_w >= interval[i]) & (flat_w < interval[i+1])
+                if i == (2**name_and_condition[var.name] - 1):
+                    indexW = (flat_w >= interval[i]) & (flat_w <= interval[i+1])
+                copy_w[indexW] = i
+                if np.any(indexW):
+                    flat_w[indexW] = np.mean(flat_w[indexW])
+            #index_w[var.name] = copy_w.astype(np.int32).reshape(var.get_shape())
+            index_w[var.name] = tf.Variable(copy_w.astype(np.int32).reshape(var.get_shape()),
+                                            trainable=False, collections=[tf.GraphKeys.QUANTABLE])
+            sess.run(var.assign(tf.convert_to_tensor(flat_w.reshape(var.get_shape()))))
+    return index_w
 
+    
+def pruning(sess, name_and_condition):
+    index_w = {}
+    for var in tf.trainable_variables():
+        if var.name in name_and_condition:
+            org_w = sess.run(var)
+            ## show information
+            print(var.name, "-num of non-zero weight before pruning: ", np.count_nonzero(org_w))
+            plotData("BefPrune_"+name_dir[var.name], org_w.flatten())
+             
+            threshold = np.std(org_w) * name_and_condition[var.name]
+            under_threshold = np.absolute(org_w) < threshold
+            org_w[under_threshold] = 0
+
+            index_w[var.name] = tf.Variable(tf.constant(-under_threshold, dtype=tf.float32), 
+                                            trainable=False, collections=[tf.GraphKeys.PRUNING])
+            sess.run(var.assign(tf.convert_to_tensor(org_w)))
+            
+            ## show information
+            print(var.name, "-num of non-zero weight after pruning: ", np.count_nonzero(org_w))
+            plotData("AftPrune_"+name_dir[var.name], org_w.flatten()) 
+    return index_w
+
+    
 def eval_once(saver, summary_writer, top_k_op, summary_op):
   """Run Eval once.
 
@@ -86,6 +158,27 @@ def eval_once(saver, summary_writer, top_k_op, summary_op):
       print('No checkpoint file found')
       return
 
+
+#    tf.GraphKeys.QUANTABLE = "QUANTABLE"
+#    name_and_condition = {"conv1/weights:0": 8,
+#                          "conv2/weights:0": 8}
+#                         "local3/weights:0": 8,
+#                         "local4/weights:0": 8,
+#                         "softmax_linear/weights:0": 8}
+#    # Quanization
+#    index_w = quanization(sess, name_and_condition)
+
+    tf.GraphKeys.PRUNING = "PRUNING"
+    name_and_condition = {"conv1/weights:0": 0.39,
+                          "conv2/weights:0": 0.39,
+                          "local3/weights:0": 0.39,
+                          "local4/weights:0": 0.39,
+                          "softmax_linear/weights:0": 0.39}
+    # Pruning
+    #index_w = pruning(sess, name_and_condition)
+    #sess.run(tf.initialize_variables(tf.get_collection(tf.GraphKeys.PRUNING)))
+    
+        
     # Start the queue runners.
     coord = tf.train.Coordinator()
     try:
@@ -93,7 +186,7 @@ def eval_once(saver, summary_writer, top_k_op, summary_op):
       for qr in tf.get_collection(tf.GraphKeys.QUEUE_RUNNERS):
         threads.extend(qr.create_threads(sess, coord=coord, daemon=True,
                                          start=True))
-
+      start_time = time.time()
       num_iter = int(math.ceil(FLAGS.num_examples / FLAGS.batch_size))
       true_count = 0  # Counts the number of correct predictions.
       total_sample_count = num_iter * FLAGS.batch_size
@@ -102,10 +195,11 @@ def eval_once(saver, summary_writer, top_k_op, summary_op):
         predictions = sess.run([top_k_op])
         true_count += np.sum(predictions)
         step += 1
-
+      duration = time.time() - start_time
+      
       # Compute precision @ 1.
       precision = true_count / total_sample_count
-      print('%s: precision @ 1 = %.3f' % (datetime.now(), precision))
+      print('%s: precision @ 1 = %.3f, druation = %.6f' % (datetime.now(), precision, duration))
 
       summary = tf.Summary()
       summary.ParseFromString(sess.run(summary_op))
@@ -116,8 +210,8 @@ def eval_once(saver, summary_writer, top_k_op, summary_op):
 
     coord.request_stop()
     coord.join(threads, stop_grace_period_secs=10)
-
-
+        
+        
 def evaluate():
   """Eval CIFAR-10 for a number of steps."""
   with tf.Graph().as_default() as g:
@@ -131,25 +225,26 @@ def evaluate():
 
     # Calculate predictions.
     top_k_op = tf.nn.in_top_k(logits, labels, 1)
-
+  
     # Restore the moving average version of the learned variables for eval.
-    variable_averages = tf.train.ExponentialMovingAverage(
-        cifar10.MOVING_AVERAGE_DECAY)
-    variables_to_restore = variable_averages.variables_to_restore()
-    saver = tf.train.Saver(variables_to_restore)
-
+    #variable_averages = tf.train.ExponentialMovingAverage(
+    #    cifar10.MOVING_AVERAGE_DECAY)
+    #variables_to_restore = variable_averages.variables_to_restore()
+    #saver = tf.train.Saver(variables_to_restore)
+    saver = tf.train.Saver()
+    
     # Build the summary operation based on the TF collection of Summaries.
-    summary_op = tf.summary.merge_all()
+    summary_op = tf.merge_all_summaries()
 
-    summary_writer = tf.summary.FileWriter(FLAGS.eval_dir, g)
+    summary_writer = tf.train.SummaryWriter(FLAGS.eval_dir, g)
 
     while True:
       eval_once(saver, summary_writer, top_k_op, summary_op)
       if FLAGS.run_once:
         break
       time.sleep(FLAGS.eval_interval_secs)
-
-
+    
+    
 def main(argv=None):  # pylint: disable=unused-argument
   cifar10.maybe_download_and_extract()
   if tf.gfile.Exists(FLAGS.eval_dir):
@@ -159,5 +254,4 @@ def main(argv=None):  # pylint: disable=unused-argument
 
 
 if __name__ == '__main__':
-  FLAGS = parser.parse_args()
   tf.app.run()

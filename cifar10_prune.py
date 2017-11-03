@@ -53,60 +53,60 @@ FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_string('train_dir', './ckpt',
                            """Directory where to write event logs """
                            """and checkpoint.""")
-tf.app.flags.DEFINE_string('quan_dir', './ckpt_quan_6',
+tf.app.flags.DEFINE_string('prune_dir', './ckpt_prune_1',
                            """Directory where to write event logs """
                            """and checkpoint.""")
-tf.app.flags.DEFINE_integer('max_steps', 20000,
+tf.app.flags.DEFINE_integer('max_steps', 10000,
                             """Number of batches to run.""")
 tf.app.flags.DEFINE_boolean('log_device_placement', False,
                             """Whether to log device placement.""")
 
+name_dir = {"conv1/weights:0": "conv1",
+            "conv2/weights:0": "conv2",
+            "local3/weights:0": "local3",
+            "local4/weights:0": "local4",
+            "softmax_linear/weights:0": "softmax"}
+              
 def plotData(titleName, flatW, numBin=None):
-    sortW = np.sort(flatW)
-    uniqW = np.unique(sortW)
-    print("The # of cluster: " + str(uniqW.shape[0]))
-#    for item in uniqW:
-#        print("%f : %d" %(item, sortW.tolist().count(item)))
-
-#    fig = plt.figure()
-#    fig.suptitle(titleName)
-#    curr_plot = fig.add_subplot(111)
-##    binBoundaries = np.linspace(minW, maxW, 2**bit + 1)
-#    if numBin == None:
-#        curr_plot.hist(flatW, bins=256);
-#    else:
-#        curr_plot.hist(flatW, bins=2**numBin, edgecolor='None');
-#    curr_plot.set_xlabel('Weight Value')
-#    curr_plot.set_ylabel('Count')
-##    curr_plot.set_xlim(minW, maxW)
-#    curr_plot.grid(True)
-#    fig.savefig(titleName + '.pdf')
-#    plt.close('all')
+    fig = plt.figure()
+    fig.suptitle(titleName)
+    curr_plot = fig.add_subplot(111)
+#    binBoundaries = np.linspace(minW, maxW, 2**bit + 1)
+    if numBin == None:
+        curr_plot.hist(flatW[flatW!=0], bins=256, edgecolor='None');
+    else:
+        curr_plot.hist(flatW[flatW!=0], bins=2**numBin, edgecolor='None');
+    curr_plot.set_xlabel('Weight Value')
+    curr_plot.set_ylabel('Count')
+#    curr_plot.set_xlim(minW, maxW)
+    curr_plot.grid(True)
+    fig.savefig(titleName + '.pdf')
+    plt.close('all')
 
 
-def Quantization(sess, layerAndBit):
-    indexWs = {}
+def pruning(sess, name_and_condition):
+    index_w = {}
     for var in tf.trainable_variables():
-        if var.name in layerAndBit:
-            #print(var.name)
-            orgW = sess.run(var)
-            flatW = orgW.flatten()
-            indexW = flatW.copy()
+        if var.name in name_and_condition:
+            org_w = sess.run(var)
+            ## show information
+            print(var.name, "num of non-zero weight before pruning: ", np.count_nonzero(org_w))
+            plotData("BefPrune_"+name_dir[var.name], org_w.flatten())
+            
+            threshold = np.sqrt(0.5 * np.sum(np.power(org_w, 2))) * name_and_condition[var.name]
+            #under_threshold = org_w < threshold
+            #threshold = np.std(org_w) * name_and_condition[var.name]
+            under_threshold = np.absolute(org_w) < threshold
+            org_w[under_threshold] = 0
 
-            maxW, minW  = np.amax(flatW), np.amin(flatW)
-            interval = np.linspace(minW, maxW, 2**layerAndBit[var.name] + 1)
-            for i in xrange(2**layerAndBit[var.name]):
-                indexE = (flatW >= interval[i]) & (flatW < interval[i+1])
-                if i == (2**layerAndBit[var.name] - 1):
-                    indexE = (flatW >= interval[i]) & (flatW <= interval[i+1])
-                indexW[indexE] = i
-                if np.any(indexE):
-                    flatW[indexE] = np.mean(flatW[indexE])
-            #indexWs[var.name] = indexW.astype(np.int32).reshape(var.get_shape())
-            indexWs[var.name] = tf.Variable(indexW.astype(np.int32).reshape(var.get_shape()),
-                                            trainable=False, collections=[tf.GraphKeys.QUANTABLE])
-            sess.run(var.assign(tf.convert_to_tensor(flatW.reshape(var.get_shape()))))
-    return indexWs
+            index_w[var.name] = tf.Variable(tf.constant(-under_threshold, dtype=tf.float32), 
+                                            trainable=False, collections=[tf.GraphKeys.PRUNING])
+            sess.run(var.assign(tf.convert_to_tensor(org_w)))
+            
+            ## show information
+            print(var.name, "num of non-zero weight after pruning: ", np.count_nonzero(org_w))
+            plotData("AftPrune_"+name_dir[var.name], org_w.flatten())
+    return index_w
 
 
 def train():
@@ -141,25 +141,25 @@ def train():
       return
 
 
-    tf.GraphKeys.QUANTABLE = "QUANTABLE"
-    layerAndBit = {"conv1/weights:0": 6,
-                   "conv2/weights:0": 6}#,
-#                   "local3/weights:0": 8,
-#                   "local4/weights:0": 8,
-#                   "softmax_linear/weights:0": 8}
-    # Quantization
-    indexWs = Quantization(sess, layerAndBit)
-    sess.run(tf.initialize_variables(tf.get_collection(tf.GraphKeys.QUANTABLE)))
+    tf.GraphKeys.PRUNING = "PRUNING"
+    name_and_condition = {"conv1/weights:0": 0.0001,
+                          "conv2/weights:0": 0.0001,
+                          "local3/weights:0": 0.0001,
+                          "local4/weights:0": 0.0001,
+                          "softmax_linear/weights:0": 0.0001}
+    # Pruning
+    index_w = pruning(sess, name_and_condition)
+    sess.run(tf.initialize_variables(tf.get_collection(tf.GraphKeys.PRUNING)))
 
 
     global_step = tf.Variable(0, trainable=False, name="global_step")
 
     # Build a Graph that trains the model with one batch of examples and
     # updates the model parameters.
-    train_op = cifar10.train(loss, global_step, layerAndBit, indexWs)
+    train_op = cifar10.train(loss, global_step, name_and_condition, index_w)
 
     summary_op = tf.merge_all_summaries()
-    summary_writer = tf.train.SummaryWriter(FLAGS.quan_dir, sess.graph)
+    summary_writer = tf.train.SummaryWriter(FLAGS.prune_dir, sess.graph)
 
     # Start the queue runners.
     tf.train.start_queue_runners(sess=sess)
@@ -189,23 +189,23 @@ def train():
         summary_str = sess.run(summary_op)
         summary_writer.add_summary(summary_str, step)
 
-      #if (step + 1) == FLAGS.max_steps:
-        if loss_value <= current_loss:
+      if loss_value <= current_loss or (step + 1) == FLAGS.max_steps:
           current_loss = loss_value
-          checkpoint_path = os.path.join(FLAGS.quan_dir, 'model.ckpt')
+          checkpoint_path = os.path.join(FLAGS.prune_dir, 'model.ckpt')
           saver.save(sess, checkpoint_path, global_step=step)
 
     for var in tf.trainable_variables():
-      if var.name in layerAndBit:
-        print(var.name)
-        flatW = sess.run(var).flatten()
-        plotData("AftReTrain", flatW, layerAndBit[var.name])
-
-
+        if var.name in name_and_condition:
+            org_w = sess.run(var)
+            ## show information
+            print(var.name, "num of non-zero weight after retaining: ", np.count_nonzero(org_w))
+            plotData("AftRetrain_"+name_dir[var.name], org_w.flatten())          
+          
+          
 def main(argv=None):  # pylint: disable=unused-argument
-  if tf.gfile.Exists(FLAGS.quan_dir):
-    tf.gfile.DeleteRecursively(FLAGS.quan_dir)
-  tf.gfile.MakeDirs(FLAGS.quan_dir)
+  if tf.gfile.Exists(FLAGS.prune_dir):
+    tf.gfile.DeleteRecursively(FLAGS.prune_dir)
+  tf.gfile.MakeDirs(FLAGS.prune_dir)
   train()
 
 
