@@ -103,7 +103,7 @@ def Quantization(sess, layerAndBit):
                 if np.any(indexE):
                     flatW[indexE] = np.mean(flatW[indexE])
             #indexWs[var.name] = indexW.astype(np.int32).reshape(var.get_shape())
-            indexWs[var.name] = tf.Variable(indexW.astype(np.int32).reshape(var.get_shape()),
+            indexWs[var.name] = tf.Variable(indexW.astype(np.float32).reshape(var.get_shape()),
                                             trainable=False, collections=[tf.GraphKeys.QUANTABLE])
             sess.run(var.assign(tf.convert_to_tensor(flatW.reshape(var.get_shape()))))
     return indexWs
