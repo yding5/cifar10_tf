@@ -158,7 +158,7 @@ def train():
     # updates the model parameters.
     train_op = cifar10.train(loss, global_step, name_and_condition, index_w)
 
-    summary_op = tf.merge_all_summaries()
+    summary_op = tf.summary.merge_all()
     summary_writer = tf.train.SummaryWriter(FLAGS.prune_dir, sess.graph)
 
     # Start the queue runners.
