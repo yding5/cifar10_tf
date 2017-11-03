@@ -42,7 +42,7 @@ import math
 import time
 
 import numpy as np
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 
