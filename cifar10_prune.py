@@ -53,7 +53,7 @@ FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_string('train_dir', './ckpt',
                            """Directory where to write event logs """
                            """and checkpoint.""")
-tf.app.flags.DEFINE_string('prune_dir', './ckpt_prune_1',
+tf.app.flags.DEFINE_string('prune_dir', './ckpt_prune_YK_1',
                            """Directory where to write event logs """
                            """and checkpoint.""")
 tf.app.flags.DEFINE_integer('max_steps', 10000,
