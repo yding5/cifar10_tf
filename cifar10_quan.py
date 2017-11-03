@@ -125,7 +125,7 @@ def train():
 
     # Calculate loss.
     loss = cifar10.loss(logits, labels)
-    tf.scalar_summary(loss.op.name, loss)
+    tf.summary.scalar(loss.op.name, loss)
 
     ckpt = tf.train.get_checkpoint_state(FLAGS.train_dir)
     if ckpt and ckpt.model_checkpoint_path:

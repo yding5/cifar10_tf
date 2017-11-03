@@ -235,7 +235,7 @@ def evaluate():
     saver = tf.train.Saver()
     
     # Build the summary operation based on the TF collection of Summaries.
-    summary_op = tf.merge_all_summaries()
+    summary_op =  tf.summary.merge_all()
 
     summary_writer = tf.train.SummaryWriter(FLAGS.eval_dir, g)
 
