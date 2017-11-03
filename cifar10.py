@@ -330,8 +330,8 @@ def apply_quantization(name_and_condition, index_w, grads_and_vars):
             for i in xrange(2**name_and_condition[var.name]):
                 shape = grad.get_shape()
                 grad_pos = tf.to_float(tf.equal(index_w[var.name], tf.constant(i, dtype=tf.int32, shape=shape)))
-                grad_ind = tf.cond(tf.equal(grad_sum[i], 0), lambda: tf.mul(grad_pos, grad_sum[i]),
-                                                             lambda: tf.mul(grad_pos, grad_sum[i] / tf.reduce_sum(grad_pos))) 
+                grad_ind = tf.cond(tf.equal(grad_sum[i], 0), lambda: tf.multiply(grad_pos, grad_sum[i]),
+                                                             lambda: tf.multiply(grad_pos, grad_sum[i] / tf.reduce_sum(grad_pos))) 
                 grad_all = tf.add(grad_ind, grad_all)           
             grads_and_vars[cont] = (grad_all, var)
         cont += 1
@@ -342,7 +342,7 @@ def apply_pruning(name_and_condition, index_w, grads_and_vars):
     cont = 0
     for grad, var in grads_and_vars:
         if var.name in index_w:
-            grads_and_vars[cont] = (tf.mul(index_w[var.name], grad), var)
+            grads_and_vars[cont] = (tf.multiply(index_w[var.name], grad), var)
         cont += 1
     return grads_and_vars  
   
