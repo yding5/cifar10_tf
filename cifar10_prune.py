@@ -159,7 +159,7 @@ def train():
     train_op = cifar10.train(loss, global_step, name_and_condition, index_w)
 
     summary_op = tf.summary.merge_all()
-    summary_writer = tf.train.SummaryWriter(FLAGS.prune_dir, sess.graph)
+    summary_writer =  tf.summary.FileWriter(FLAGS.prune_dir, sess.graph)
 
     # Start the queue runners.
     tf.train.start_queue_runners(sess=sess)
