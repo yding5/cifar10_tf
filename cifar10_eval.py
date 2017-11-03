@@ -39,7 +39,7 @@ import math
 import time
 
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import tensorflow as tf
 
 import cifar10
@@ -72,20 +72,21 @@ def plotData(titleName, flatW, numBin=None):
 #    for item in uniqW:
 #        print("%f : %d" %(item, sortW.tolist().count(item)))
 
-    fig = plt.figure()
-    fig.suptitle(titleName)
-    curr_plot = fig.add_subplot(111)
-#    binBoundaries = np.linspace(minW, maxW, 2**bit + 1)
-    if numBin == None:
-        curr_plot.hist(flatW[flatW!=0], bins=256, edgecolor='None');
-    else:
-        curr_plot.hist(flatW[flatW!=0], bins=2**numBin, edgecolor='None');
-    curr_plot.set_xlabel('Weight Value')
-    curr_plot.set_ylabel('Count')
-#    curr_plot.set_xlim(minW, maxW)
-    curr_plot.grid(True)
-    fig.savefig(titleName + '.pdf')
-    plt.close('all')
+#DYK
+#     fig = plt.figure()
+#     fig.suptitle(titleName)
+#     curr_plot = fig.add_subplot(111)
+# #    binBoundaries = np.linspace(minW, maxW, 2**bit + 1)
+#     if numBin == None:
+#         curr_plot.hist(flatW[flatW!=0], bins=256, edgecolor='None');
+#     else:
+#         curr_plot.hist(flatW[flatW!=0], bins=2**numBin, edgecolor='None');
+#     curr_plot.set_xlabel('Weight Value')
+#     curr_plot.set_ylabel('Count')
+# #    curr_plot.set_xlim(minW, maxW)
+#     curr_plot.grid(True)
+#     fig.savefig(titleName + '.pdf')
+#     plt.close('all')
 
 
 def quanization(sess, name_and_condition):

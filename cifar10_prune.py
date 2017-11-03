@@ -42,7 +42,7 @@ import math
 import time
 
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 
@@ -68,20 +68,20 @@ name_dir = {"conv1/weights:0": "conv1",
             "softmax_linear/weights:0": "softmax"}
               
 def plotData(titleName, flatW, numBin=None):
-    fig = plt.figure()
-    fig.suptitle(titleName)
-    curr_plot = fig.add_subplot(111)
-#    binBoundaries = np.linspace(minW, maxW, 2**bit + 1)
-    if numBin == None:
-        curr_plot.hist(flatW[flatW!=0], bins=256, edgecolor='None');
-    else:
-        curr_plot.hist(flatW[flatW!=0], bins=2**numBin, edgecolor='None');
-    curr_plot.set_xlabel('Weight Value')
-    curr_plot.set_ylabel('Count')
-#    curr_plot.set_xlim(minW, maxW)
-    curr_plot.grid(True)
-    fig.savefig(titleName + '.pdf')
-    plt.close('all')
+#     fig = plt.figure()
+#     fig.suptitle(titleName)
+#     curr_plot = fig.add_subplot(111)
+# #    binBoundaries = np.linspace(minW, maxW, 2**bit + 1)
+#     if numBin == None:
+#         curr_plot.hist(flatW[flatW!=0], bins=256, edgecolor='None');
+#     else:
+#         curr_plot.hist(flatW[flatW!=0], bins=2**numBin, edgecolor='None');
+#     curr_plot.set_xlabel('Weight Value')
+#     curr_plot.set_ylabel('Count')
+# #    curr_plot.set_xlim(minW, maxW)
+#     curr_plot.grid(True)
+#     fig.savefig(titleName + '.pdf')
+#     plt.close('all')
 
 
 def pruning(sess, name_and_condition):
