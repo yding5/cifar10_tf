@@ -228,9 +228,9 @@ def evaluate():
     # Calculate predictions.
     top_k_op = tf.nn.in_top_k(logits, labels, 1)
     # Calcuate the error Y.D.
-    print(tf.shape(logits))
+    print(logits.get_shape().as_list())
 
-    error_op = tf.subtract(logits,labels)
+    error_op = tf.subtract(logits,labels.astype(np.float32))
     error_max_op = tf.reduce_max(error_op)
 
     softmax_logits = tf.nn.softmax (logits)
