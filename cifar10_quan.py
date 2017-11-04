@@ -142,13 +142,15 @@ def train():
 
 
     tf.GraphKeys.QUANTABLE = "QUANTABLE"
-    layerAndBit = {"conv1/weights:0": 16,
-                   "conv2/weights:0": 16,
-                   "local3/weights:0": 16,
-                   "local4/weights:0": 16,
-                   "softmax_linear/weights:0": 16}
+    layerAndBit = {"conv1/weights:0": 4,
+                   "conv2/weights:0": 4}
+                  #  "local3/weights:0": 16,
+                  #  "local4/weights:0": 16,
+                  #  "softmax_linear/weights:0": 16}
     # Quantization
+    print("going to Quantization")
     indexWs = Quantization(sess, layerAndBit)
+    print("finish Quantization")
     sess.run(tf.variables_initializer(tf.get_collection(tf.GraphKeys.QUANTABLE)))
 
 
