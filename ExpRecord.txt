@@ -76,7 +76,11 @@ error.py:
                     "softmax_linear/weights:0": 6}
 
 eval.py:
-
+2017-11-04 19:33:15.941640: precision @ 1 = 0.859, druation = 3.530235
 error.py:
-
+2017-11-04 19:33:50.251955: precision @ 1 = 0.867, druation = 16.937442
+2017-11-04 19:33:50.252076: mean error after softmax  = 0.312
+2017-11-04 19:33:50.252096: mean error without softmax  = 48.037
+2017-11-04 19:33:50.252109: max error after softmax  = 2.000
+2017-11-04 19:33:50.252116: max error without softmax  = 136.130
 
