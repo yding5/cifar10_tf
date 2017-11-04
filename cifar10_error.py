@@ -201,6 +201,7 @@ def eval_once(saver, summary_writer, top_k_op, summary_op, error_max_op, error_s
         true_count += np.sum(predictions)
 
         sm_error_sum = sess.run([sm_error_sum_op])
+        print (sm_error_sum)
         sm_error_sum_count += np.sum(sm_error_sum)
 
         step += 1
