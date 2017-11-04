@@ -239,7 +239,7 @@ def evaluate():
     # Calcuate the error Y.D.
     print(logits.get_shape().as_list())
 
-    label_matrix = one_hot(labels,10)
+    label_matrix = tf.one_hot(labels,10)
 
     error_op = tf.subtract(logits,tf.to_float(label_matrix))
     error_max_op = tf.reduce_max(error_op,axis=1)
