@@ -143,7 +143,7 @@ def train():
 
     tf.GraphKeys.QUANTABLE = "QUANTABLE"
     layerAndBit = {"conv1/weights:0": 4,
-                   "conv2/weights:0": 4}
+                   "conv2/weights:0": 4,
                     "local3/weights:0": 4,
                     "local4/weights:0": 4,
                     "softmax_linear/weights:0": 4}
