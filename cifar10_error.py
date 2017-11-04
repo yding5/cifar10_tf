@@ -194,6 +194,8 @@ def eval_once(saver, summary_writer, top_k_op, summary_op, error_max_op, error_s
 
       sm_error_sum_count = 0
       error_sum_count = 0
+      current_max = 0
+      sm_current_max = 0
 
       total_sample_count = num_iter * FLAGS.batch_size
       step = 0
@@ -209,6 +211,16 @@ def eval_once(saver, summary_writer, top_k_op, summary_op, error_max_op, error_s
         print (error_sum)
         error_sum_count += np.sum(error_sum)
 
+        error_max = sess.run([error_max_op])
+        print (error_max)
+        if current_max < error_max:
+            current_max = error_max
+
+        sm_error_max = sess.run([sm_error_max_op])
+        print (sm_error_max)
+        if sm_current_max < sm_error_max:
+            sm_current_max = sm_error_max
+
         step += 1
       duration = time.time() - start_time
       
@@ -219,6 +231,8 @@ def eval_once(saver, summary_writer, top_k_op, summary_op, error_max_op, error_s
       print('%s: mean error after softmax  = %.3f' % (datetime.now(), sm_error_mean))
       error_mean = error_sum_count / total_sample_count
       print('%s: mean error without softmax  = %.3f' % (datetime.now(), error_mean))
+      print('%s: max error after softmax  = %.3f' % (datetime.now(), sm_current_max))
+      print('%s: max error without softmax  = %.3f' % (datetime.now(), current_max))
 
       summary = tf.Summary()
       summary.ParseFromString(sess.run(summary_op))
@@ -249,14 +263,14 @@ def evaluate():
 
     label_matrix = tf.one_hot(labels,10)
 
-    error_op = tf.subtract(logits,tf.to_float(label_matrix))
+    error_op = tf.abs(tf.subtract(logits,tf.to_float(label_matrix)))
     error_max_op = tf.reduce_max(error_op,axis=1)
     error_sum_op = tf.reduce_sum(error_op)
     print(error_max_op.get_shape().as_list())
     print(error_sum_op.get_shape().as_list())
 
     softmax_logits = tf.nn.softmax (logits)
-    sm_error_op = tf.subtract(softmax_logits,tf.to_float(label_matrix))
+    sm_error_op = tf.abs(tf.subtract(softmax_logits,tf.to_float(label_matrix)))
     sm_error_max_op = tf.reduce_max(sm_error_op,axis=1)
     sm_error_sum_op = tf.reduce_sum(sm_error_op)
     print(sm_error_max_op.get_shape().as_list())
