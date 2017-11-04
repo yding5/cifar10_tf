@@ -344,7 +344,7 @@ def apply_pruning(name_and_condition, index_w, grads_and_vars):
     cont = 0
     for grad, var in grads_and_vars:
         if var.name in index_w:
-            grads_and_vars[cont] = (tf.multiply(index_w[var.name], grad), var)
+            grads_and_vars[cont] = (tf.multiply(index_w[var.name].astype(np.float32), grad), var)
         cont += 1
     return grads_and_vars  
   
