@@ -42,7 +42,7 @@ import math
 import time
 
 import numpy as np
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 
@@ -53,7 +53,7 @@ FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_string('train_dir', './ckpt',
                            """Directory where to write event logs """
                            """and checkpoint.""")
-tf.app.flags.DEFINE_string('quan_dir', './ckpt_quan_YK_1',
+tf.app.flags.DEFINE_string('quan_dir', './ckpt_quan_8',
                            """Directory where to write event logs """
                            """and checkpoint.""")
 tf.app.flags.DEFINE_integer('max_steps', 20000,
@@ -103,7 +103,7 @@ def Quantization(sess, layerAndBit):
                 if np.any(indexE):
                     flatW[indexE] = np.mean(flatW[indexE])
             #indexWs[var.name] = indexW.astype(np.int32).reshape(var.get_shape())
-            indexWs[var.name] = tf.Variable(indexW.astype(np.float32).reshape(var.get_shape()),
+            indexWs[var.name] = tf.Variable(indexW.astype(np.int32).reshape(var.get_shape()),
                                             trainable=False, collections=[tf.GraphKeys.QUANTABLE])
             sess.run(var.assign(tf.convert_to_tensor(flatW.reshape(var.get_shape()))))
     return indexWs
@@ -142,11 +142,11 @@ def train():
 
 
     tf.GraphKeys.QUANTABLE = "QUANTABLE"
-    layerAndBit = {"conv1/weights:0": 16,
-                   "conv2/weights:0": 16,
-                   "local3/weights:0": 16,
-                   "local4/weights:0": 16,
-                   "softmax_linear/weights:0": 16}
+    layerAndBit = {"conv1/weights:0": 8,
+                   "conv2/weights:0": 8}#,
+#                   "local3/weights:0": 8,
+#                   "local4/weights:0": 8,
+#                   "softmax_linear/weights:0": 8}
     # Quantization
     indexWs = Quantization(sess, layerAndBit)
     sess.run(tf.variables_initializer(tf.get_collection(tf.GraphKeys.QUANTABLE)))
@@ -165,8 +165,8 @@ def train():
     tf.train.start_queue_runners(sess=sess)
 
     for i in tf.global_variables():
-      if not sess.run(tf.is_variable_initialized(i)):
-        sess.run(tf.variables_initializer([i]))
+        if not sess.run(tf.is_variable_initialized(i)):
+            sess.run(tf.variables_initializer([i]))
     
     current_loss = 10.0
     for step in xrange(FLAGS.max_steps):
@@ -195,11 +195,11 @@ def train():
           checkpoint_path = os.path.join(FLAGS.quan_dir, 'model.ckpt')
           saver.save(sess, checkpoint_path, global_step=step)
 
-    # for var in tf.trainable_variables():
-    #   if var.name in layerAndBit:
-    #     print(var.name)
-    #     flatW = sess.run(var).flatten()
-    #     plotData("AftReTrain", flatW, layerAndBit[var.name])
+#    for var in tf.trainable_variables():
+#      if var.name in layerAndBit:
+#        print(var.name)
+#        flatW = sess.run(var).flatten()
+#        plotData("AftReTrain", flatW, layerAndBit[var.name])
 
 
 def main(argv=None):  # pylint: disable=unused-argument
