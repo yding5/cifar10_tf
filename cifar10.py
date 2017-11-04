@@ -384,8 +384,8 @@ def train(total_loss, global_step, name_and_condition, index_w):
   grads = opt.compute_gradients(total_loss)
   
   # Apply gradients.
-  #quan_grads = apply_quantization(name_and_condition, index_w, grads)
-  quan_grads = apply_pruning(name_and_condition, index_w, grads)    
+  quan_grads = apply_quantization(name_and_condition, index_w, grads)
+  #quan_grads = apply_pruning(name_and_condition, index_w, grads)    
   apply_gradient_op = opt.apply_gradients(quan_grads, global_step=global_step)
 
   
