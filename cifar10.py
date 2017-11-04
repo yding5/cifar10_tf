@@ -258,7 +258,7 @@ def inference(images):
 
   # softmax, i.e. softmax(WX + b)
   with tf.variable_scope('softmax_linear') as scope:
-    weights = _variable_with_weight_decay('weights', [192, shape=NUM_CLASSES],
+    weights = _variable_with_weight_decay('weights', [192, NUM_CLASSES],
                                           stddev=1/192.0, wd=0.0)
     biases = _variable_on_cpu('biases', [NUM_CLASSES],
                               tf.constant_initializer(0.0))
