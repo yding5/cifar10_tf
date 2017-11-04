@@ -2,9 +2,12 @@
 eval.py:
 2017-11-04 15:31:23.863139: precision @ 1 = 0.865, druation = 3.720944
 error.py:
-2017-11-04 15:46:24.807588: precision @ 1 = 0.864, druation = 10.453169
-2017-11-04 15:46:24.807675: mean error after softmax  = -0.000
-2017-11-04 15:46:24.807691: mean error without softmax  = -0.858
+2017-11-04 16:26:03.209799: precision @ 1 = 0.873, druation = 16.999680
+2017-11-04 16:26:03.209876: mean error after softmax  = 0.303
+2017-11-04 16:26:03.209899: mean error without softmax  = 50.351
+2017-11-04 16:26:03.209909: max error after softmax  = 2.000
+2017-11-04 16:26:03.209916: max error without softmax  = 130.822
+
 
 
 1:
@@ -13,9 +16,11 @@ error.py:
 eval.py:
 2017-11-04 14:03:08.048171: precision @ 1 = 0.846, druation = 3.665714
 error.py:
-2017-11-04 15:47:26.959200: precision @ 1 = 0.847, druation = 10.339396
-2017-11-04 15:47:26.959287: mean error after softmax  = -0.000
-2017-11-04 15:47:26.959314: mean error without softmax  = -0.879
+2017-11-04 16:27:12.885328: precision @ 1 = 0.838, druation = 17.040151
+2017-11-04 16:27:12.885384: mean error after softmax  = 0.350
+2017-11-04 16:27:12.885396: mean error without softmax  = 41.865
+2017-11-04 16:27:12.885404: max error after softmax  = 2.000
+2017-11-04 16:27:12.885411: max error without softmax  = 116.396
 
 2:
     layerAndBit = {"conv1/weights:0": 4,
