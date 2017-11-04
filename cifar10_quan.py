@@ -53,7 +53,7 @@ FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_string('train_dir', './ckpt',
                            """Directory where to write event logs """
                            """and checkpoint.""")
-tf.app.flags.DEFINE_string('quan_dir', './ckpt_quan_YK_1',
+tf.app.flags.DEFINE_string('quan_dir', './ckpt_quan_YK_2',
                            """Directory where to write event logs """
                            """and checkpoint.""")
 tf.app.flags.DEFINE_integer('max_steps', 20000,
@@ -144,9 +144,9 @@ def train():
     tf.GraphKeys.QUANTABLE = "QUANTABLE"
     layerAndBit = {"conv1/weights:0": 4,
                    "conv2/weights:0": 4}
-                  #  "local3/weights:0": 16,
-                  #  "local4/weights:0": 16,
-                  #  "softmax_linear/weights:0": 16}
+                    "local3/weights:0": 4,
+                    "local4/weights:0": 4,
+                    "softmax_linear/weights:0": 4}
     # Quantization
     print("going to Quantization")
     indexWs = Quantization(sess, layerAndBit)
