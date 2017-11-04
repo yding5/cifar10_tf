@@ -193,6 +193,7 @@ def eval_once(saver, summary_writer, top_k_op, summary_op, error_max_op, error_s
       true_count = 0  # Counts the number of correct predictions.
 
       sm_error_sum_count = 0
+      error_sum_count = 0
 
       total_sample_count = num_iter * FLAGS.batch_size
       step = 0
@@ -204,6 +205,10 @@ def eval_once(saver, summary_writer, top_k_op, summary_op, error_max_op, error_s
         print (sm_error_sum)
         sm_error_sum_count += np.sum(sm_error_sum)
 
+        error_sum = sess.run([error_sum_op])
+        print (error_sum)
+        error_sum_count += np.sum(error_sum)
+
         step += 1
       duration = time.time() - start_time
       
@@ -212,6 +217,8 @@ def eval_once(saver, summary_writer, top_k_op, summary_op, error_max_op, error_s
       print('%s: precision @ 1 = %.3f, druation = %.6f' % (datetime.now(), precision, duration))
       sm_error_mean = sm_error_sum_count / total_sample_count
       print('%s: mean error after softmax  = %.3f' % (datetime.now(), sm_error_mean))
+      error_mean = error_sum_count / total_sample_count
+      print('%s: mean error without softmax  = %.3f' % (datetime.now(), error_mean))
 
       summary = tf.Summary()
       summary.ParseFromString(sess.run(summary_op))
