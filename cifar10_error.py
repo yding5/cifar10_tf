@@ -264,14 +264,16 @@ def evaluate():
     label_matrix = tf.one_hot(labels,10)
 
     error_op = tf.abs(tf.subtract(logits,tf.to_float(label_matrix)))
-    error_max_op = tf.reduce_max(error_op,axis=1)
+    error_max_op = tf.reduce_sum(error_op,axis=1)
+    error_max_op = tf.reduce_max(error_max_op)
     error_sum_op = tf.reduce_sum(error_op)
     print(error_max_op.get_shape().as_list())
     print(error_sum_op.get_shape().as_list())
 
     softmax_logits = tf.nn.softmax (logits)
     sm_error_op = tf.abs(tf.subtract(softmax_logits,tf.to_float(label_matrix)))
-    sm_error_max_op = tf.reduce_max(sm_error_op,axis=1)
+    sm_error_max_op = tf.reduce_sum(sm_error_op,axis=1)
+    sm_error_max_op = tf.reduce_max(sm_error_max_op,axis=1)
     sm_error_sum_op = tf.reduce_sum(sm_error_op)
     print(sm_error_max_op.get_shape().as_list())
     print(sm_error_sum_op.get_shape().as_list())
