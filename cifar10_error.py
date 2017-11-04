@@ -137,7 +137,7 @@ def pruning(sess, name_and_condition):
     return index_w
 
     
-def eval_once(saver, summary_writer, top_k_op, summary_op):
+def eval_once(saver, summary_writer, top_k_op, summary_op, error_max_op, error_sum_op, sm_error_max_op, sm_error_sum_op):
   """Run Eval once.
 
   Args:
@@ -191,17 +191,26 @@ def eval_once(saver, summary_writer, top_k_op, summary_op):
       start_time = time.time()
       num_iter = int(math.ceil(FLAGS.num_examples / FLAGS.batch_size))
       true_count = 0  # Counts the number of correct predictions.
+
+      sm_error_sum_count = 0
+
       total_sample_count = num_iter * FLAGS.batch_size
       step = 0
       while step < num_iter and not coord.should_stop():
         predictions = sess.run([top_k_op])
         true_count += np.sum(predictions)
+
+        sm_error_sum = sess.run([sm_error_sum_op])
+        sm_error_sum_count += np.sum(sm_error_sum)
+
         step += 1
       duration = time.time() - start_time
       
       # Compute precision @ 1.
       precision = true_count / total_sample_count
       print('%s: precision @ 1 = %.3f, druation = %.6f' % (datetime.now(), precision, duration))
+      sm_error_mean = sm_error_sum_count / total_sample_count
+      print('%s: mean error after softmax  = %.3f' % (datetime.now(), precision))
 
       summary = tf.Summary()
       summary.ParseFromString(sess.run(summary_op))
@@ -230,12 +239,18 @@ def evaluate():
     # Calcuate the error Y.D.
     print(logits.get_shape().as_list())
 
-    error_op = tf.subtract(logits,labels.astype(np.float32))
-    error_max_op = tf.reduce_max(error_op)
+    error_op = tf.subtract(logits,tf.to_float(labels))
+    error_max_op = tf.reduce_max(error_op,axis=1)
+    error_sum_op = tf.reduce_sum(error_op)
+    print(error_max_op.get_shape().as_list())
+    print(error_sum_op.get_shape().as_list())
 
     softmax_logits = tf.nn.softmax (logits)
-    sm_error_op = tf.subtract(softmax_logits,labels.astype(np.float32))
-    sm_error_max_op = tf.reduce_max(sm_error_op)
+    sm_error_op = tf.subtract(softmax_logits,tf.to_float(labels))
+    sm_error_max_op = tf.reduce_max(sm_error_op,axis=1)
+    sm_error_sum_op = tf.reduce_sum(sm_error_op)
+    print(sm_error_max_op.get_shape().as_list())
+    print(sm_error_sum_op.get_shape().as_list())
 
     # Restore the moving average version of the learned variables for eval.
     #variable_averages = tf.train.ExponentialMovingAverage(
@@ -250,7 +265,7 @@ def evaluate():
     summary_writer = tf.summary.FileWriter(FLAGS.eval_dir, g)
 
     while True:
-      eval_once(saver, summary_writer, top_k_op, summary_op)
+      eval_once(saver, summary_writer, top_k_op, summary_op, error_max_op, error_sum_op, sm_error_max_op, sm_error_sum_op)
       if FLAGS.run_once:
         break
       time.sleep(FLAGS.eval_interval_secs)
