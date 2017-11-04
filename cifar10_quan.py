@@ -161,13 +161,18 @@ def train():
     summary_op = tf.summary.merge_all()
     summary_writer = tf.summary.FileWriter(FLAGS.quan_dir, sess.graph)
 
+    print("going to start the queue runners")
     # Start the queue runners.
     tf.train.start_queue_runners(sess=sess)
+
+    print("queue runners started")
 
     for i in tf.global_variables():
       if not sess.run(tf.is_variable_initialized(i)):
         sess.run(tf.variables_initializer([i]))
     
+    print("variables initialization finished")
+
     current_loss = 10.0
     for step in xrange(FLAGS.max_steps):
       start_time = time.time()
