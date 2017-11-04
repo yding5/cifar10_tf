@@ -44,7 +44,7 @@ error.py:
                     "local3/weights:0": 2,
                     "local4/weights:0": 2,
                     "softmax_linear/weights:0": 2}
-
+eval.py:
 2017-11-04 16:56:05.320873: precision @ 1 = 0.188, druation = 3.628469
 error.py:
 2017-11-04 16:55:06.257904: precision @ 1 = 0.175, druation = 17.067567
@@ -54,4 +54,29 @@ error.py:
 2017-11-04 16:55:06.258009: max error without softmax  = 10.731
 
 4:
+    layerAndBit = {"conv1/weights:0": 3,
+                   "conv2/weights:0": 3,
+                    "local3/weights:0": 3,
+                    "local4/weights:0": 3,
+                    "softmax_linear/weights:0": 3}
+eval.py:
+2017-11-04 17:54:17.588597: precision @ 1 = 0.440, druation = 5.493508
+error.py:
+2017-11-04 17:53:34.737130: precision @ 1 = 0.429, druation = 25.752606
+2017-11-04 17:53:34.737214: mean error after softmax  = 1.387
+2017-11-04 17:53:34.737230: mean error without softmax  = 10.987
+2017-11-04 17:53:34.737240: max error after softmax  = 1.996
+2017-11-04 17:53:34.737247: max error without softmax  = 30.019
+
+5:
+    layerAndBit = {"conv1/weights:0": 6,
+                   "conv2/weights:0": 6,
+                    "local3/weights:0": 6,
+                    "local4/weights:0": 6,
+                    "softmax_linear/weights:0": 6}
+
+eval.py:
+
+error.py:
+
 
