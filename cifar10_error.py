@@ -234,7 +234,7 @@ def evaluate():
     error_max_op = tf.reduce_max(error_op)
 
     softmax_logits = tf.nn.softmax (logits)
-    sm_error_op = tf.subtract(softmax_logits,labels)
+    sm_error_op = tf.subtract(softmax_logits,labels.astype(np.float32))
     sm_error_max_op = tf.reduce_max(sm_error_op)
 
     # Restore the moving average version of the learned variables for eval.
