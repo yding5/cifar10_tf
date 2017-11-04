@@ -65,7 +65,7 @@ name_dir = {"conv1/weights:0": "conv1",
             "local4/weights:0": "local4",
             "softmax_linear/weights:0": "softmax"}
 
-def plotData(titleName, flatW, numBin=None):
+#def plotData(titleName, flatW, numBin=None):
 #    sortW = np.sort(flatW)
 #    uniqW = np.unique(sortW)
 #    print("The # of cluster: " + str(uniqW.shape[0]))
@@ -121,7 +121,7 @@ def pruning(sess, name_and_condition):
             org_w = sess.run(var)
             ## show information
             print(var.name, "-num of non-zero weight before pruning: ", np.count_nonzero(org_w))
-            plotData("BefPrune_"+name_dir[var.name], org_w.flatten())
+            #plotData("BefPrune_"+name_dir[var.name], org_w.flatten())
              
             threshold = np.std(org_w) * name_and_condition[var.name]
             under_threshold = np.absolute(org_w) < threshold
@@ -133,7 +133,7 @@ def pruning(sess, name_and_condition):
             
             ## show information
             print(var.name, "-num of non-zero weight after pruning: ", np.count_nonzero(org_w))
-            plotData("AftPrune_"+name_dir[var.name], org_w.flatten()) 
+            #plotData("AftPrune_"+name_dir[var.name], org_w.flatten()) 
     return index_w
 
     
