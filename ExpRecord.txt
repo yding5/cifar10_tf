@@ -1,5 +1,26 @@
+0: original
+eval.py:
+2017-11-04 15:31:23.863139: precision @ 1 = 0.865, druation = 3.720944
+error.py:
+2017-11-04 15:31:49.845729: precision @ 1 = 0.863, druation = 7.104838
+2017-11-04 15:31:49.845890: mean error after softmax  = 0.863
+
 1:
     layerAndBit = {"conv1/weights:0": 4,
                    "conv2/weights:0": 4}
+eval.py:
 2017-11-04 14:03:08.048171: precision @ 1 = 0.846, druation = 3.665714
+error.py:
+2017-11-04 15:32:58.253677: precision @ 1 = 0.846, druation = 6.966264
+2017-11-04 15:32:58.253777: mean error after softmax  = 0.846
+
+2:
+    layerAndBit = {"conv1/weights:0": 4,
+                   "conv2/weights:0": 4,
+                    "local3/weights:0": 4,
+                    "local4/weights:0": 4,
+                    "softmax_linear/weights:0": 4}
+eval.py:
+2017-11-04 15:31:01.568903: precision @ 1 = 0.789, druation = 3.514027
+error.py:
 

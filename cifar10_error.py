@@ -210,7 +210,7 @@ def eval_once(saver, summary_writer, top_k_op, summary_op, error_max_op, error_s
       precision = true_count / total_sample_count
       print('%s: precision @ 1 = %.3f, druation = %.6f' % (datetime.now(), precision, duration))
       sm_error_mean = sm_error_sum_count / total_sample_count
-      print('%s: mean error after softmax  = %.3f' % (datetime.now(), precision))
+      print('%s: mean error after softmax  = %.3f' % (datetime.now(), sm_error_mean))
 
       summary = tf.Summary()
       summary.ParseFromString(sess.run(summary_op))
