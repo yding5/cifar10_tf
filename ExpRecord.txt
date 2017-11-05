@@ -84,3 +84,20 @@ error.py:
 2017-11-04 19:33:50.252109: max error after softmax  = 2.000
 2017-11-04 19:33:50.252116: max error without softmax  = 136.130
 
+6:
+
+layerAndBit = {"conv1/weights:0": 10,
+                   "conv2/weights:0": 10,
+                    "local3/weights:0": 10,
+                    "local4/weights:0": 10,
+                    "softmax_linear/weights:0": 10}
+eval.py:
+2017-11-05 10:21:56.840416: precision @ 1 = 0.866, druation = 3.916633
+error.py:
+2017-11-05 10:22:50.336931: precision @ 1 = 0.871, druation = 16.301383
+2017-11-05 10:22:50.337050: mean error after softmax  = 0.303
+2017-11-05 10:22:50.337070: mean error without softmax  = 50.475
+2017-11-05 10:22:50.337082: max error after softmax  = 2.000
+2017-11-05 10:22:50.337089: max error without softmax  = 126.614
+
+

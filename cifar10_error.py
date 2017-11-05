@@ -204,26 +204,26 @@ def eval_once(saver, summary_writer, top_k_op, summary_op, error_max_op, error_s
         true_count += np.sum(predictions)
 
         sm_error_sum = sess.run([sm_error_sum_op])
-        print (sm_error_sum)
+        #print (sm_error_sum)
         sm_error_sum_count += np.sum(sm_error_sum)
 
         error_sum = sess.run([error_sum_op])
-        print (error_sum)
+        #print (error_sum)
         error_sum_count += np.sum(error_sum)
 
         error_max = sess.run([error_max_op])
-        print (error_max)
+        #print (error_max)
         error_max=float(error_max[0])
-        print ('|before and after cast|')
-        print (error_max)
+        #print ('|before and after cast|')
+        #print (error_max)
         if current_max < error_max:
             current_max = error_max
 
         sm_error_max = sess.run([sm_error_max_op])
-        print (sm_error_max)
+        #print (sm_error_max)
         sm_error_max=float(sm_error_max[0])
-        print ('|before and after cast|')
-        print (sm_error_max)
+        #print ('|before and after cast|')
+        #print (sm_error_max)
         if sm_current_max < sm_error_max:
             sm_current_max = sm_error_max
 
