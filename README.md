@@ -1,2 +1,2 @@
 # cifar10_tf
-Quantization of CNN on cifar10
+Quantization and Pruning of CNN on cifar10
